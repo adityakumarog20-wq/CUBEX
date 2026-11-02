@@ -495,4 +495,4 @@ private fun AdjustingBar(
                 Icon(
                     painter = painterResource(R.drawable.ic_delete_filled),
                     tint = MaterialTheme.colorScheme.error,
-  
+ 
