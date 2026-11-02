@@ -32,15 +32,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,6 +66,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.Lifecycle
@@ -78,6 +84,10 @@ import com.movtery.zalithlauncher.ui.screens.content.elements.backgroundGlass
 import com.movtery.zalithlauncher.ui.screens.content.home.server.ServerCardManager
 import com.movtery.zalithlauncher.ui.screens.content.home.server.ServerCardSettingsHost
 import com.movtery.zalithlauncher.ui.screens.content.home.version.VersionCardManager
+import com.movtery.zalithlauncher.ui.screens.content.home.version.LocalHomeCardLauncher
+import com.movtery.zalithlauncher.ui.screens.content.home.version.LocalHomeCardVersionSettings
+import com.movtery.zalithlauncher.game.version.installed.VersionsManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.movtery.zalithlauncher.ui.theme.cardColor
 import com.movtery.zalithlauncher.ui.theme.onCardColor
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -257,6 +267,110 @@ fun HomeGrid(
                 }
             }
 
+            // CUBEX hero area: a real Compose layout, not a static screenshot.
+            val selectedVersion by VersionsManager.currentVersion.collectAsStateWithLifecycle()
+            val launchSelectedVersion = LocalHomeCardLauncher.current
+            val openVersionSettings = LocalHomeCardVersionSettings.current
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .height(184.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFF101B2B),
+                contentColor = Color.White
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF10243B),
+                                    Color(0xFF101522),
+                                    Color(0xFF07101C)
+                                )
+                            )
+                        )
+                        .padding(horizontal = 22.dp, vertical = 16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "MINECRAFT JAVA EDITION",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF65D8FF)
+                        )
+                        Text(
+                            text = "Your next world awaits.",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFF050A12).copy(alpha = 0.85f),
+                                onClick = { selectedVersion?.let(openVersionSettings) }
+                            ) {
+                                Text(
+                                    text = if (selectedVersion == null) "SELECT VERSION" else "CHANGE VERSION",
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            Button(
+                                onClick = { selectedVersion?.let(launchSelectedVersion) },
+                                enabled = selectedVersion != null,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF087FEA),
+                                    contentColor = Color.White,
+                                    disabledContainerColor = Color(0xFF334155),
+                                    disabledContentColor = Color(0xFF9AA8B8)
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("PLAY MINECRAFT", fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                    }
+                    Text(
+                        text = "CUBEX",
+                        modifier = Modifier.align(Alignment.TopStart),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF55CFFF)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "YOUR LAUNCHER",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = "CUBEX • JAVA",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             val systemCards = HomeCards.systemCards()
             if (!systemCards.isEmpty()) {
                 Column(
@@ -381,35 +495,4 @@ private fun AdjustingBar(
                 Icon(
                     painter = painterResource(R.drawable.ic_delete_filled),
                     tint = MaterialTheme.colorScheme.error,
-                    contentDescription = stringResource(R.string.generic_delete)
-                )
-            }
-
-            Spacer(Modifier.width(2.dp))
-
-            IconButton(
-                modifier = Modifier.size(34.dp),
-                onClick = { state.exitAdjusting() }
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_check),
-                    contentDescription = stringResource(R.string.generic_done)
-                )
-            }
-        }
-    }
-}
-
-/**
- * 消费落在自身范围内的全部指针事件
- */
-private fun Modifier.barGuard(): Modifier = pointerInput(Unit) {
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false).consume()
-        while (true) {
-            val event = awaitPointerEvent()
-            event.changes.forEach { it.consume() }
-            if (event.changes.none { it.pressed }) return@awaitEachGesture
-        }
-    }
-}
+  
