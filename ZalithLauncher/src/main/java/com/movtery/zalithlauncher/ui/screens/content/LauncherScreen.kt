@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -168,9 +169,13 @@ fun LauncherScreen(
             //拖拽期间以预览侧为准
             val effectiveSide = dragState.previewSide ?: dockedSide
 
+            // CUBEX header reserves a strip above the existing launcher content.
+            val cubexTopBarHeight = 54.dp
+            val cubexTopBarHeightPx = with(LocalDensity.current) { cubexTopBarHeight.toPx() }
+
             //卡片尺寸与停泊槽内容区保持一致
             val cardWidth = maxWidth * (ActionMenuWeight / (ActionMenuWeight + ContentWeight)) - ActionMenuOuterPadding
-            val cardHeight = maxHeight - ActionMenuOuterPadding * 2
+            val cardHeight = maxHeight - cubexTopBarHeight - ActionMenuOuterPadding * 2
 
             val toAccountManageScreen: () -> Unit = {
                 backStackViewModel.mainScreen.navigateTo(
@@ -189,8 +194,8 @@ fun LauncherScreen(
                 }
             }
 
-            // 内容区域
-            Row(modifier = Modifier.fillMaxSize()) {
+            // CUBEX content area sits below the custom navigation strip.
+            Row(modifier = Modifier.fillMaxSize().padding(top = cubexTopBarHeight)) {
                 // ActionMenu 对接到了 Start，留出空位
                 if (dockedSide == ActionMenuSide.START) {
                     Spacer(modifier = Modifier.weight(ActionMenuWeight))
@@ -226,6 +231,55 @@ fun LauncherScreen(
                 }
             }
 
+            // CUBEX navigation header. Existing launcher actions remain available in ActionMenu.
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(cubexTopBarHeight)
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 12.dp, vertical = 5.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shadowElevation = 3.dp
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "CUBEX",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(18.dp))
+                        Text(
+                            text = "MINECRAFT JAVA",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("PLAY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text("MODS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("SKINS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("SERVERS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(
+                        text = "JAVA EDITION",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+            }
+
             val isActionMenuTaller = maxHeight >= 600.dp
             CompositionLocalProvider(LocalActionMenuDrag provides dragState) {
                 Box(
@@ -237,7 +291,7 @@ fun LauncherScreen(
                                 dragState.landingOf(effectiveSide) + dragState.settleOffset.value
                             }
                             val x = if (isRtl) parentWidthPx - cardWidth.toPx() - translation.x else translation.x
-                            IntOffset(x.roundToInt(), translation.y.roundToInt())
+                            IntOffset(x.roundToInt(), translation.y.roundToInt() + cubexTopBarHeightPx.roundToInt())
                         }
                         .size(cardWidth, cardHeight)
                 ) {
@@ -413,345 +467,4 @@ private fun VersionsContent(
                             .padding(8.dp)
                             .fillMaxWidth(),
                         swapToVersionManage = toVersionManageScreen,
-                        openListMenu = { showList = true },
-                    )
-                }
-                version?.takeIf { !isRefreshing && it.isValid() }?.let {
-                    IconButton(
-                        modifier = Modifier.padding(end = 8.dp),
-                        onClick = toVersionSettingsScreen
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_settings_filled),
-                            contentDescription = stringResource(R.string.versions_manage_settings)
-                        )
-                    }
-                }
-            }
-
-            val menuAnchor = versionManagerRow
-            val menuAnchorBounds = menuAnchor?.boundsInParent()
-            val menuAnchorX = menuAnchorBounds?.left ?: 0f
-            val menuAnchorHeight = menuAnchorBounds?.height ?: 0f
-
-            DropdownMenu(
-                expanded = showList && menuAnchor != null,
-                onDismissRequest = { showList = false },
-                modifier = Modifier.width(260.dp),
-                offset = DpOffset(
-                    x = with(LocalDensity.current) { menuAnchorX.toDp() },
-                    y = with(LocalDensity.current) { (-menuAnchorHeight).toDp() } - 8.dp
-                ),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                val versions by VersionsManager.versions.collectAsStateWithLifecycle()
-                versions.forEach { version0 ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CommonVersionInfoLayout(
-                                    modifier = Modifier.weight(1f),
-                                    version = version0,
-                                    iconSize = 28.dp
-                                )
-                                IconButton(
-                                    onClick = {
-                                        onLaunchGame(version0)
-                                        showList = false
-                                    }
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_play_arrow_filled),
-                                        contentDescription = stringResource(R.string.main_launch_game),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            if (version == version0) return@DropdownMenuItem
-                            VersionsManager.saveVersion(version0)
-                            showList = false
-                        }
-                    )
-                }
-            }
-        }
-
-        ScalingActionButton(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(PaddingValues(horizontal = 12.dp))
-                .padding(bottom = 8.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
-            onClick = {
-                onLaunchGame(null)
-            },
-            content = {
-                MarqueeText(text = stringResource(R.string.main_launch_game))
-            }
-        )
-    }
-}
-
-@Composable
-private fun ActionMenuCardContent(
-    modifier: Modifier = Modifier,
-    account: Account?,
-    onLaunchGame: (Version?) -> Unit,
-    toAccountManageScreen: () -> Unit,
-    toVersionManageScreen: () -> Unit,
-    toVersionSettingsScreen: () -> Unit,
-) {
-    BackgroundCard(
-        modifier = Modifier
-            .actionMenuDragAnchor()
-            .guideNode(GuideKeys.Main.Step.CardDrag)
-            .then(modifier),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        ConstraintLayout(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val (accountAvatar, versionManagerLayout) = createRefs()
-
-            AccountAvatarCenter(
-                modifier = Modifier
-                    .constrainAs(accountAvatar) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(versionManagerLayout.top)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    }.guideNode(
-                        key = GuideKeys.Main.Step.Account,
-                        preferSide = GuideSide.Below
-                    ),
-                account = account,
-                onClick = toAccountManageScreen
-            )
-
-            VersionsContent(
-                modifier = Modifier.constrainAs(versionManagerLayout) {
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                    bottom.linkTo(parent.bottom)
-                },
-                onLaunchGame = onLaunchGame,
-                toVersionManageScreen = toVersionManageScreen,
-                toVersionSettingsScreen = toVersionSettingsScreen,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActionMenuTallerContent(
-    modifier: Modifier = Modifier,
-    account: Account?,
-    dockedSide: ActionMenuSide,
-    onLaunchGame: (Version?) -> Unit,
-    toAccountManageScreen: () -> Unit,
-    toVersionManageScreen: () -> Unit,
-    toVersionSettingsScreen: () -> Unit,
-) {
-    val refreshWardrobe by AccountsManager.refreshWardrobe.collectAsStateWithLifecycle()
-
-    Column(
-        modifier = Modifier
-            .actionMenuDragAnchor()
-            .guideNode(
-                key = GuideKeys.Main.Step.CardDrag,
-                holeRadius = 0.dp,
-            )
-            .then(modifier),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-        // 偏航角符号与停泊侧相反，让模型面向屏幕内容一侧
-        val yaw = Math.toRadians(
-            ((if (dockedSide == ActionMenuSide.START) 35.0 else -(35.0)) * (if (isRtl) -1 else 1))
-        ).toFloat()
-
-        val armModel = account?.skinModelType?.toArmModel()
-        val skinStamp = account?.getSkinFile()?.lastModified()
-        val capeStamp = account?.getCapeFile()?.lastModified()
-        val skinBytes by produceState<ByteArray?>(null, account, refreshWardrobe, skinStamp) {
-            value = withContext(Dispatchers.IO) {
-                account?.getSkinFile()?.takeIf { it.exists() }
-                    ?.inputStream()?.use { it.readBytes() }
-            }
-        }
-        val capeBytes by produceState<ByteArray?>(null, account, refreshWardrobe, capeStamp) {
-            value = withContext(Dispatchers.IO) {
-                account?.getCapeFile()?.takeIf { it.exists() }
-                    ?.inputStream()?.use { it.readBytes() }
-            }
-        }
-
-        PetModelView(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            skin = skinBytes,
-            cape = capeBytes,
-            arm = armModel,
-            yaw = yaw,
-            animation = PetAnimation.Idle,
-            tapReaction = PetTapReaction.Interact,
-            dragYaw = false
-        )
-
-        BackgroundCard(
-            modifier = Modifier
-                .guideNode(
-                    key = GuideKeys.Main.Step.Account,
-                    preferSide = GuideSide.Above,
-                    holeRadius = 28.dp
-                )
-                .fillMaxWidth(),
-            shape = MaterialTheme.shapes.extraLarge,
-            onClick = toAccountManageScreen
-        ) {
-            AccountAvatarRow(
-                modifier = Modifier.fillMaxWidth(),
-                account = account,
-            )
-        }
-
-        BackgroundCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.extraLarge,
-        ) {
-            VersionsContent(
-                modifier = Modifier.fillMaxWidth(),
-                onLaunchGame = onLaunchGame,
-                toVersionManageScreen = toVersionManageScreen,
-                toVersionSettingsScreen = toVersionSettingsScreen,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActionMenu(
-    isVisible: Boolean,
-    isTaller: Boolean,
-    dockedSide: ActionMenuSide,
-    onLaunchGame: (Version?) -> Unit,
-    swapDirection: AnimatedDirection,
-    pickUpScale: () -> Float,
-    modifier: Modifier = Modifier,
-    toAccountManageScreen: () -> Unit = {},
-    toVersionManageScreen: () -> Unit = {},
-    toVersionSettingsScreen: () -> Unit = {}
-) {
-    val ctx = rememberAnimatedContext(isVisible = isVisible)
-
-    val account by AccountsManager.currentAccountFlow.collectAsStateWithLifecycle()
-
-    val contentModifier = modifier.graphicsLayer {
-        val scale = pickUpScale()
-        scaleX = scale
-        scaleY = scale
-    }.animated(ctx, from = swapDirection)
-
-    if (isTaller) {
-        ActionMenuTallerContent(
-            modifier = contentModifier,
-            account = account,
-            dockedSide = dockedSide,
-            onLaunchGame = onLaunchGame,
-            toAccountManageScreen = toAccountManageScreen,
-            toVersionManageScreen = toVersionManageScreen,
-            toVersionSettingsScreen = toVersionSettingsScreen,
-        )
-    } else {
-        ActionMenuCardContent(
-            modifier = contentModifier,
-            account = account,
-            onLaunchGame = onLaunchGame,
-            toAccountManageScreen = toAccountManageScreen,
-            toVersionManageScreen = toVersionManageScreen,
-            toVersionSettingsScreen = toVersionSettingsScreen,
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun VersionManagerLayout(
-    isRefreshing: Boolean,
-    version: Version?,
-    swapToVersionManage: () -> Unit,
-    openListMenu: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .actionMenuDragExclusion()
-            .clip(shape = MaterialTheme.shapes.large)
-            .combinedClickable(
-                role = Role.Button,
-                onClick = swapToVersionManage,
-                onLongClick = {
-                    if (version != null) openListMenu()
-                }
-            ).guideNode(
-                key = GuideKeys.Main.Step.VersionList,
-                preferSide = GuideSide.Above,
-            ).padding(PaddingValues(all = 8.dp))
-    ) {
-        if (isRefreshing) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                LoadingIndicator(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .align(Alignment.Center)
-                )
-            }
-        } else {
-            VersionIconImage(
-                version = version,
-                modifier = Modifier
-                    .size(28.dp)
-                    .align(Alignment.CenterVertically)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-
-            if (version == null) {
-                Text(
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically)
-                        .basicMarquee(iterations = Int.MAX_VALUE),
-                    text = stringResource(R.string.versions_manage_no_versions),
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1
-                )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically)
-                ) {
-                    Text(
-                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
-                        text = version.getVersionName(),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1
-                    )
-                    if (version.isValid()) {
-                        Text(
-                            modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
-                            text = version.getVersionSummary(),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+                        openListMenu = { show
